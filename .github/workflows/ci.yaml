@@ -1,0 +1,47 @@
+name: Continuous integration
+on:
+  pull_request:
+  schedule:
+    - cron: "0 10 * * 5"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - 1.75.0
+        features:
+          - k3s
+          - gitea
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        name: Setup toolchain
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: rustfmt,clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build -F "${{ matrix.features }}"
+
+      - name: Test
+        env:
+          CI: true
+        run: cargo test -F "${{ matrix.features }}"
+
+      - name: Fmt
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: |
+          cargo clippy -F "${{ matrix.features }}" -- -D warnings
+          cargo clippy --tests -F "${{ matrix.features }}" -- -D warnings

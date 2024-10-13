@@ -1,0 +1,29 @@
+name: Security audit
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 5"
+  push:
+    branches:
+      - main
+    paths:
+      - "**/Cargo.toml"
+
+jobs:
+  deny-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v1
+
+  audit-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        name: Setup toolchain
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: audit
+
+      - run: cargo audit
