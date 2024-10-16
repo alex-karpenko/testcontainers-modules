@@ -103,10 +103,7 @@ pub async fn get_test_kube_client() -> Result<Client> {
 async fn start_git_server() -> &'static sync::RwLock<Option<ContainerAsync<Gitea>>> {
     GIT_SERVER_CONTAINER
         .get_or_init(|| async {
-            let out_dir = get_runtime_folder().unwrap();
-            let container = gitea::run_git_server(&format!("{out_dir}/gitea-runtime"))
-                .await
-                .unwrap();
+            let container = gitea::run_git_server().await.unwrap();
             sync::RwLock::new(Some(container))
         })
         .await
@@ -143,6 +140,7 @@ fn init_crypto_provider() {
 #[cfg(all(feature = "destructor", any(feature = "k3s", feature = "gitea")))]
 #[dtor]
 fn shutdown_test_containers() {
+    eprintln!("destructor");
     static LOCK: sync::Mutex<()> = sync::Mutex::const_new(());
 
     let _ = thread::spawn(|| {
