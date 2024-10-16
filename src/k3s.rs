@@ -17,7 +17,9 @@ pub const K3S_TRAEFIK_HTTP_PORT: ContainerPort = ContainerPort::Tcp(80);
 pub const K3S_RANCHER_WEBHOOK_PORT: ContainerPort = ContainerPort::Tcp(8443);
 
 pub const K3S_IMAGE_NAME: &str = "rancher/k3s";
-pub const KUBE_VERSION_DEFAULT: &str = "1.31";
+pub const K3S_DEFAULT_KUBE_VERSION: &str = "1.31";
+
+const RUNTIME_FOLDER_SUFFIX: &str = "k3s-runtime";
 const AVAILABLE_K3S_IMAGE_TAGS: [(&str, &str); 6] = [
     ("1.31", "v1.31.1-k3s1"),
     ("1.30", "v1.30.5-k3s1"),
@@ -27,13 +29,11 @@ const AVAILABLE_K3S_IMAGE_TAGS: [(&str, &str); 6] = [
     ("1.26", "v1.26.15-k3s1"),
 ];
 
-const RUNTIME_FOLDER_SUFFIX: &str = "k3s-runtime";
-
 #[derive(Debug, Clone)]
 pub struct K3s {
     kubeconfig_mount: Mount,
     tag: String,
-    cmd: K3sCmd,
+    features: K3sFeatures,
 }
 
 impl Default for K3s {
@@ -44,8 +44,8 @@ impl Default for K3s {
                 format!("{build_out_dir}/{RUNTIME_FOLDER_SUFFIX}"),
                 "/etc/rancher/k3s/",
             ),
-            tag: version_to_tag(KUBE_VERSION_DEFAULT).unwrap(),
-            cmd: K3sCmd::default(),
+            tag: version_to_tag(K3S_DEFAULT_KUBE_VERSION).unwrap(),
+            features: K3sFeatures::default(),
         }
     }
 }
@@ -54,7 +54,7 @@ fn version_to_tag(version: impl Into<String>) -> Result<String> {
     let version = version.into();
     let version = version.strip_prefix("v").map(String::from).unwrap_or(version);
     let version = if version.is_empty() || version == "latest" {
-        KUBE_VERSION_DEFAULT
+        K3S_DEFAULT_KUBE_VERSION
     } else {
         version.as_str()
     };
@@ -68,7 +68,7 @@ fn version_to_tag(version: impl Into<String>) -> Result<String> {
 }
 
 #[derive(Debug, Clone)]
-struct K3sCmd {
+struct K3sFeatures {
     snapshotter: String,
     traefik: bool,
     network_policy: bool,
@@ -80,7 +80,7 @@ struct K3sCmd {
     agent: bool,
 }
 
-impl Default for K3sCmd {
+impl Default for K3sFeatures {
     fn default() -> Self {
         Self {
             snapshotter: "native".to_string(),
@@ -96,7 +96,7 @@ impl Default for K3sCmd {
     }
 }
 
-impl IntoIterator for &K3sCmd {
+impl IntoIterator for &K3sFeatures {
     type Item = String;
     type IntoIter = <Vec<String> as IntoIterator>::IntoIter;
 
@@ -154,11 +154,11 @@ impl Image for K3s {
     }
 
     fn cmd(&self) -> impl IntoIterator<Item = impl Into<Cow<'_, str>>> {
-        &self.cmd
+        &self.features
     }
 
     fn expose_ports(&self) -> &[ContainerPort] {
-        if self.cmd.traefik {
+        if self.features.traefik {
             &[K3S_KUBE_API_PORT, K3S_RANCHER_WEBHOOK_PORT, K3S_TRAEFIK_HTTP_PORT]
         } else {
             &[K3S_KUBE_API_PORT, K3S_RANCHER_WEBHOOK_PORT]
@@ -176,9 +176,9 @@ impl K3s {
 
     pub fn with_snapshotter(self, snapshotter: impl Into<String>) -> Self {
         Self {
-            cmd: K3sCmd {
+            features: K3sFeatures {
                 snapshotter: snapshotter.into(),
-                ..self.cmd
+                ..self.features
             },
             ..self
         }
@@ -186,37 +186,46 @@ impl K3s {
 
     pub fn with_traefik(self, traefik: bool) -> Self {
         Self {
-            cmd: K3sCmd { traefik, ..self.cmd },
+            features: K3sFeatures {
+                traefik,
+                ..self.features
+            },
             ..self
         }
     }
 
     pub fn with_service_lb(self, service_lb: bool) -> Self {
         Self {
-            cmd: K3sCmd { service_lb, ..self.cmd },
+            features: K3sFeatures {
+                service_lb,
+                ..self.features
+            },
             ..self
         }
     }
 
     pub fn with_coredns(self, coredns: bool) -> Self {
         Self {
-            cmd: K3sCmd { coredns, ..self.cmd },
+            features: K3sFeatures {
+                coredns,
+                ..self.features
+            },
             ..self
         }
     }
 
     pub fn with_agent(self, agent: bool) -> Self {
         Self {
-            cmd: K3sCmd { agent, ..self.cmd },
+            features: K3sFeatures { agent, ..self.features },
             ..self
         }
     }
 
     pub fn with_helm_controller(self, helm_controller: bool) -> Self {
         Self {
-            cmd: K3sCmd {
+            features: K3sFeatures {
                 helm_controller,
-                ..self.cmd
+                ..self.features
             },
             ..self
         }
@@ -224,9 +233,9 @@ impl K3s {
 
     pub fn with_local_storage(self, local_storage: bool) -> Self {
         Self {
-            cmd: K3sCmd {
+            features: K3sFeatures {
                 local_storage,
-                ..self.cmd
+                ..self.features
             },
             ..self
         }
@@ -234,9 +243,9 @@ impl K3s {
 
     pub fn with_metrics_server(self, metrics_server: bool) -> Self {
         Self {
-            cmd: K3sCmd {
+            features: K3sFeatures {
                 metrics_server,
-                ..self.cmd
+                ..self.features
             },
             ..self
         }
@@ -244,9 +253,9 @@ impl K3s {
 
     pub fn with_network_policy(self, network_policy: bool) -> Self {
         Self {
-            cmd: K3sCmd {
+            features: K3sFeatures {
                 network_policy,
-                ..self.cmd
+                ..self.features
             },
             ..self
         }
@@ -254,7 +263,7 @@ impl K3s {
 
     pub fn with_all_features(self, all_features: bool) -> Self {
         Self {
-            cmd: K3sCmd {
+            features: K3sFeatures {
                 traefik: all_features,
                 service_lb: all_features,
                 coredns: all_features,
@@ -262,8 +271,15 @@ impl K3s {
                 network_policy: all_features,
                 local_storage: all_features,
                 metrics_server: all_features,
-                ..self.cmd
+                ..self.features
             },
+            ..self
+        }
+    }
+
+    pub fn with_kubeconfig_folder(self, folder: impl Into<String>) -> Self {
+        Self {
+            kubeconfig_mount: Mount::bind_mount(folder.into(), "/etc/rancher/k3s/"),
             ..self
         }
     }
@@ -293,9 +309,7 @@ impl K3s {
     }
 }
 
-pub(crate) async fn run_k3s_cluster(k3s_base_dir: &String) -> Result<ContainerAsync<K3s>> {
-    tokio::fs::create_dir_all(k3s_base_dir).await?;
-
+pub(crate) async fn run_k3s_cluster() -> Result<ContainerAsync<K3s>> {
     let container = K3s::default()
         .with_all_features(false)
         .with_container_name("k3s")
@@ -315,16 +329,12 @@ mod tests {
 
     #[test]
     fn version_to_tag_correct() {
-        assert_eq!(version_to_tag("").unwrap(), AVAILABLE_K3S_IMAGE_TAGS[0].1.to_string());
-        assert_eq!(
-            version_to_tag("latest").unwrap(),
-            AVAILABLE_K3S_IMAGE_TAGS[0].1.to_string()
-        );
-        assert_eq!(
-            version_to_tag(KUBE_VERSION_DEFAULT).unwrap(),
-            AVAILABLE_K3S_IMAGE_TAGS[0].1.to_string()
-        );
-
+        let v_default = AVAILABLE_K3S_IMAGE_TAGS
+            .iter()
+            .filter(|(k, _)| *k == K3S_DEFAULT_KUBE_VERSION)
+            .map(|(_, v)| *v)
+            .take(1)
+            .collect::<Vec<&str>>()[0];
         let v1_26 = AVAILABLE_K3S_IMAGE_TAGS
             .iter()
             .filter(|(k, _)| *k == "1.26")
@@ -338,6 +348,9 @@ mod tests {
             .take(1)
             .collect::<Vec<&str>>()[0];
 
+        assert_eq!(version_to_tag("").unwrap(), v_default);
+        assert_eq!(version_to_tag("latest").unwrap(), v_default);
+        assert_eq!(version_to_tag(K3S_DEFAULT_KUBE_VERSION).unwrap(), v_default);
         assert_eq!(version_to_tag("1.26").unwrap(), v1_26);
         assert_eq!(version_to_tag("v1.27").unwrap(), v1_27);
     }

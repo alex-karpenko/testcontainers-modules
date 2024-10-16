@@ -9,7 +9,7 @@ pub const GIT_SSH_SERVER_PORT: u16 = 22;
 pub const GIT_HTTP_SERVER_PORT: u16 = 443;
 
 pub const GITEA_IMAGE_NAME: &str = "gitea/gitea";
-pub const GITEA_IMAGE_TAG: &str = "1.22.2-rootless";
+pub const GITEA_IMAGE_TAG: &str = "1.22.3-rootless";
 pub const GITEA_SSH_PORT: ContainerPort = ContainerPort::Tcp(2222);
 pub const GITEA_HTTPS_PORT: ContainerPort = ContainerPort::Tcp(3000);
 

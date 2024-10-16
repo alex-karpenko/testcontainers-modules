@@ -117,10 +117,8 @@ async fn start_k3s_cluster() -> &'static sync::RwLock<Option<ContainerAsync<K3s>
     K3S_CLUSTER_CONTAINER
         .get_or_init(|| async {
             init_crypto_provider();
-            let out_dir = get_runtime_folder().unwrap();
-
             // Create k3s container
-            let container = k3s::run_k3s_cluster(&format!("{out_dir}/k3s-runtime")).await.unwrap();
+            let container = k3s::run_k3s_cluster().await.unwrap();
 
             sync::RwLock::new(Some(container))
         })
