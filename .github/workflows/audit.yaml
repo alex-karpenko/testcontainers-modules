@@ -26,7 +26,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         name: Setup toolchain
         with:
-          toolchain: ${{ matrix.rust }}
           components: audit
 
       - run: cargo audit
