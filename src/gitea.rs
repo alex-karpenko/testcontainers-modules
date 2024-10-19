@@ -313,7 +313,7 @@ impl Gitea {
     }
 
     fn api_url(&self, api: &str) -> String {
-        let api = api.strip_prefix("/").unwrap_or(api);
+        let api = api.strip_prefix('/').unwrap_or(api);
         format!(
             "{}://localhost:{}/api/v1/{api}",
             self.protocol(),

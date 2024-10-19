@@ -52,7 +52,7 @@ impl Default for K3s {
 
 fn version_to_tag(version: impl Into<String>) -> Result<String> {
     let version = version.into();
-    let version = version.strip_prefix("v").map(String::from).unwrap_or(version);
+    let version = version.strip_prefix('v').map(String::from).unwrap_or(version);
     let version = if version.is_empty() || version == "latest" {
         K3S_DEFAULT_KUBE_VERSION
     } else {
