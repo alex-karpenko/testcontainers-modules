@@ -16,9 +16,6 @@ jobs:
           - stable
           - beta
           - 1.75.0
-        features:
-          - k3s
-          - gitea
 
     steps:
       - uses: actions/checkout@v4
@@ -31,17 +28,17 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build
-        run: cargo build -F "${{ matrix.features }}"
+        run: cargo build --all-features
 
       - name: Test
         env:
           CI: true
-        run: cargo test -F "${{ matrix.features }}"
+        run: cargo test --all-features
 
       - name: Fmt
         run: cargo fmt --all -- --check
 
       - name: Clippy
         run: |
-          cargo clippy -F "${{ matrix.features }}" -- -D warnings
-          cargo clippy --tests -F "${{ matrix.features }}" -- -D warnings
+          cargo clippy --all-features -- -D warnings
+          cargo clippy --tests --all-features -- -D warnings

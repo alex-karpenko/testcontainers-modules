@@ -36,7 +36,7 @@ jobs:
           RUSTFLAGS: -Cinstrument-coverage
           LLVM_PROFILE_FILE: test-containers-%p-%m.profraw
           RUST_LOG: debug
-        run: cargo test --all -- --include-ignored --nocapture
+        run: cargo test --all --all-features -- --include-ignored --nocapture
 
       - name: Fix target folder permissions
         run: |

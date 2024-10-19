@@ -8,6 +8,9 @@ on:
       - main
     paths:
       - "**/Cargo.toml"
+  pull_request:
+    paths:
+      - "**/Cargo.toml"
 
 jobs:
   deny-check:
